@@ -12,10 +12,11 @@ CORS(app, supports_credentials=True)
 
 # ─── DATABASE CONFIG ──────────────────────────────────────────────────────────
 DB_CONFIG = {
-    'host': 'localhost',
+    'host': 'mysql.railway.internal',
     'user': 'root',             # ← Change to your MySQL username
-    'password': '', # ← Change to your MySQL password
-    'database': 'stock_sense'
+    'password': 'aVuKLnRHybdBepNdzPgRjPPLGQSRrEFw', # ← Change to your MySQL password
+    'database': 'railway',
+    'port': int(3306)
 }
 
 def get_db():
