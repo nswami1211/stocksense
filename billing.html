@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Billing — Stock Sense</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080b10;--surface:#0e1219;--card:#141820;--border:#1f2630;--accent:#00ff88;--accent2:#0088ff;--text:#e2e8f0;--muted:#4a5568;--danger:#ff4466;--warn:#ffaa00;}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;display:flex}
+.sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;flex-shrink:0}
+.sidebar-logo{padding:28px 24px 24px;border-bottom:1px solid var(--border)}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.06em;background:linear-gradient(135deg,#fff,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-sub{font-size:11px;color:var(--muted);margin-top:2px;font-family:'JetBrains Mono',monospace}
+nav{padding:16px 12px;flex:1}
+.nav-section{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding:12px 12px 6px;font-family:'JetBrains Mono',monospace}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;font-size:14px;font-weight:500;color:var(--muted);transition:.15s;margin-bottom:2px;text-decoration:none}
+.nav-item:hover{color:var(--text);background:var(--card)}
+.nav-item.active{color:var(--accent);background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.1)}
+.sidebar-bottom{padding:16px 12px;border-top:1px solid var(--border)}
+.user-badge{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border-radius:10px;border:1px solid var(--border)}
+.user-avatar{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#000;flex-shrink:0}
+.user-name{font-size:13px;font-weight:600}.user-role{font-size:11px;color:var(--muted)}
+.main{flex:1;padding:32px;overflow-y:auto}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+.page-title{font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:.04em}
+.page-sub{font-size:13px;color:var(--muted)}
+.billing-grid{display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:16px}
+.card-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.04em;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.field-row{display:grid;gap:12px;margin-bottom:12px}
+.field-row.col2{grid-template-columns:1fr 1fr}
+.field-row.col3{grid-template-columns:1fr 1fr 1fr}
+.field{display:flex;flex-direction:column;gap:6px}
+label{font-size:11px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase}
+input,select,textarea{padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-family:'Outfit',sans-serif;outline:none;transition:.2s;width:100%}
+textarea{resize:vertical;min-height:68px;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,255,136,.08)}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+select option{background:var(--surface)}
+.search-wrap{position:relative}
+.dropdown{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 50px rgba(0,0,0,.5);max-height:260px;overflow-y:auto;display:none}
+.dropdown.open{display:block}
+.drop-item{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;transition:.1s;border-bottom:1px solid rgba(255,255,255,.03)}
+.drop-item:last-child{border-bottom:none}
+.drop-item:hover{background:var(--card)}
+.drop-name{font-size:14px;font-weight:500}
+.drop-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.drop-price{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent)}
+.cart-empty{text-align:center;padding:36px 20px;color:var(--muted);border:2px dashed var(--border);border-radius:12px}
+.cart-empty-icon{font-size:36px;margin-bottom:10px;opacity:.4}
+.cart-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.cart-item:last-child{border-bottom:none}
+.ci-info{flex:1}
+.ci-name{font-size:14px;font-weight:600}
+.ci-unit{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.ci-qty{display:flex;align-items:center;gap:6px}
+.qty-btn{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:.15s}
+.qty-btn:hover{border-color:var(--accent);color:var(--accent)}
+.qty-num{width:28px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600}
+.ci-total{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--accent);min-width:72px;text-align:right}
+.ci-del{color:var(--danger);cursor:pointer;font-size:18px;opacity:.5;transition:.1s;padding:4px}
+.ci-del:hover{opacity:1}
+.summary-panel{position:sticky;top:32px}
+.summary-rows{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px}
+.sum-row{display:flex;justify-content:space-between;font-size:14px;margin-bottom:10px;color:var(--muted)}
+.sum-row:last-child{margin-bottom:0}
+.sum-row.total{font-size:20px;font-weight:700;font-family:'Bebas Neue',sans-serif;letter-spacing:.04em;color:var(--text);padding-top:12px;border-top:1px solid var(--border);margin-top:4px}
+.sum-row.profit{color:var(--accent)}
+.sum-val{font-family:'JetBrains Mono',monospace}
+.btn{width:100%;padding:13px;border-radius:10px;border:none;cursor:pointer;font-size:15px;font-weight:700;font-family:'Outfit',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;transition:.2s;margin-bottom:10px;letter-spacing:.02em}
+.btn-primary{background:var(--accent);color:#000;box-shadow:0 0 20px rgba(0,255,136,.15)}
+.btn-primary:hover{background:#00ffaa;transform:translateY(-1px)}
+.btn-secondary{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--danger);color:var(--danger)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(6px)}
+.overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;max-width:540px;width:94%;max-height:92vh;overflow-y:auto;animation:mIn .3s ease}
+@keyframes mIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.modal-actions{display:flex;gap:10px;margin-top:20px}
+.modal-actions .btn{flex:1;margin:0}
+.btn-print{background:var(--accent2);color:#fff}
+.btn-print:hover{background:#3399ff}
+.btn-wa{background:#25d366;color:#fff}
+.btn-wa:hover{background:#20bd5a}
+.btn-pdf{background:#e53e3e;color:#fff}
+.btn-pdf:hover{background:#c53030}
+
+/* ── BARCODE SCANNER ── */
+.scan-bar{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:12px 16px;margin-bottom:14px;
+}
+.scan-bar-left{flex:1}
+.scan-label{font-size:11px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px}
+.scan-input-wrap{display:flex;gap:8px;align-items:center}
+#barcode-input{
+  flex:1;padding:10px 14px;background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-size:14px;font-family:'JetBrains Mono',monospace;
+  outline:none;transition:.2s;letter-spacing:.06em;
+}
+#barcode-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,255,136,.08)}
+#barcode-input.scanning{border-color:var(--accent);animation:scanPulse 1s ease infinite}
+#barcode-input::placeholder{font-family:'Outfit',sans-serif;letter-spacing:normal;color:var(--muted)}
+@keyframes scanPulse{0%,100%{box-shadow:0 0 0 3px rgba(0,255,136,.08)}50%{box-shadow:0 0 0 6px rgba(0,255,136,.2)}}
+.btn-scan-cam{
+  display:flex;align-items:center;gap:6px;padding:9px 14px;
+  background:rgba(0,136,255,.1);border:1px solid rgba(0,136,255,.25);
+  border-radius:8px;color:var(--accent2);cursor:pointer;font-size:13px;
+  font-weight:600;font-family:'Outfit',sans-serif;transition:.15s;white-space:nowrap;
+}
+.btn-scan-cam:hover{background:rgba(0,136,255,.2)}
+.btn-scan-cam.active{background:rgba(255,68,102,.1);border-color:rgba(255,68,102,.3);color:var(--danger)}
+.scan-status{
+  font-size:12px;margin-top:6px;display:flex;align-items:center;gap:6px;
+}
+.scan-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.scan-dot.usb{background:var(--accent2)}
+.scan-dot.cam{background:var(--accent);animation:blink 1s infinite}
+.scan-dot.found{background:var(--accent)}
+.scan-dot.error{background:var(--danger)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Camera feed modal */
+.cam-overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;z-index:200;flex-direction:column;gap:16px}
+.cam-overlay.open{display:flex}
+.cam-box{position:relative;border-radius:16px;overflow:hidden;border:2px solid var(--accent);max-width:360px;width:90%}
+#cam-video{width:100%;display:block;border-radius:14px}
+.cam-aim{
+  position:absolute;inset:0;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;
+}
+.cam-aim-inner{
+  width:200px;height:100px;border:2px solid var(--accent);border-radius:8px;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.4);
+  animation:scanLine 2s ease-in-out infinite;
+}
+@keyframes scanLine{0%,100%{border-color:var(--accent)}50%{border-color:#00ffcc}}
+.cam-hint{color:rgba(255,255,255,.7);font-size:13px;text-align:center;max-width:300px}
+.btn-cam-close{
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  color:#fff;padding:10px 24px;border-radius:8px;cursor:pointer;
+  font-size:14px;font-family:'Outfit',sans-serif;font-weight:600;
+}
+.cam-scanned-flash{
+  position:absolute;inset:0;background:rgba(0,255,136,.3);
+  border-radius:14px;opacity:0;transition:.3s;pointer-events:none;
+}
+.cam-scanned-flash.flash{opacity:1}
+
+/* ── WHITE RECEIPT ── */
+.receipt{background:#fff;color:#111;border-radius:12px;padding:28px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.9}
+.r-brand{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.08em;color:#111;text-align:center;margin-bottom:2px}
+.r-sub{text-align:center;font-size:11px;color:#888;margin-bottom:2px}
+.r-div{border:none;border-top:1px dashed #ccc;margin:10px 0}
+.r-div.thick{border-top:2px solid #222}
+.r-row{display:flex;justify-content:space-between;gap:8px;margin-bottom:2px}
+.r-row .lbl{color:#666;flex-shrink:0}
+.r-row .val{text-align:right;font-weight:600}
+.r-cust-box{background:#f5f5f5;border-radius:8px;padding:10px 14px;margin:8px 0}
+.r-cust-title{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#aaa;margin-bottom:6px}
+.r-col-heads{display:grid;grid-template-columns:1fr 90px 70px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#aaa;padding:4px 0;gap:4px}
+.r-item{display:grid;grid-template-columns:1fr 90px 70px;padding:4px 0;font-size:12px;gap:4px;border-bottom:1px solid #f0f0f0}
+.r-item:last-child{border-bottom:none}
+.r-item-name{font-weight:500}
+.r-item-qty{text-align:center;color:#555}
+.r-item-amt{text-align:right;font-weight:600}
+.r-totals{margin-top:6px}
+.r-total-line{display:flex;justify-content:space-between;font-size:16px;font-weight:700;border-top:2px solid #222;padding-top:8px;margin-top:4px}
+.r-footer{text-align:center;font-size:11px;color:#aaa;margin-top:14px;line-height:2}
+
+.toast{position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 20px;font-size:14px;font-weight:500;z-index:200;transform:translateY(80px);opacity:0;transition:.3s;max-width:320px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-left:3px solid var(--accent)}
+.toast.err{border-left:3px solid var(--danger)}
+
+@media print{
+  body *{visibility:hidden}
+  #print-area,#print-area *{visibility:visible}
+  #print-area{position:fixed;inset:0;display:flex;align-items:flex-start;justify-content:center;padding:30px;background:#fff;z-index:9999}
+  .receipt{width:100%;max-width:400px;box-shadow:none;border-radius:0;padding:20px;font-size:12px}
+}
+@media(max-width:900px){
+  .billing-grid{grid-template-columns:1fr}
+  .summary-panel{position:relative;top:0}
+  .field-row.col3{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">Stock Sense</div>
+    <div class="logo-sub">Management OS</div>
+  </div>
+  <nav>
+    <div class="nav-section">Main</div>
+    <a href="home.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Dashboard
+    </a>
+    <div class="nav-section">Modules</div>
+    <a href="billing.html" class="nav-item active">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Billing
+    </a>
+    <a href="inventory.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+      Inventory
+    </a>
+    <a href="profit.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+      Profit Tracking
+    </a>
+    <a href="alerts.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      Smart Alerts
+    </a>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="user-badge">
+      <div class="user-avatar" id="avatar-char">O</div>
+      <div><div class="user-name" id="user-display">Owner</div><div class="user-role">Store Manager</div></div>
+    </div>
+    <a href="/logout" style="display:flex;align-items:center;gap:8px;padding:10px 12px;color:var(--muted);font-size:13px;text-decoration:none;margin-top:8px;border-radius:8px;transition:.15s" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--muted)'">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      Logout
+    </a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title">BILLING</div>
+      <div class="page-sub">Enter customer info · Add products · Generate & send invoice</div>
+    </div>
+  </div>
+
+  <div class="billing-grid">
+    <!-- LEFT -->
+    <div>
+      <!-- Customer Details -->
+      <div class="card">
+        <div class="card-title">👤 Customer Details</div>
+        <div class="field-row col2">
+          <div class="field">
+            <label>Customer Name *</label>
+            <input id="c-name" placeholder="e.g. Ravi Kumar"/>
+          </div>
+          <div class="field">
+            <label>Phone Number</label>
+            <input id="c-phone" type="tel" placeholder="10-digit mobile number" maxlength="10"/>
+          </div>
+        </div>
+        <div class="field-row col3">
+          <div class="field">
+            <label>Payment Mode</label>
+            <select id="c-payment">
+              <option>Cash</option>
+              <option>UPI</option>
+              <option>Card</option>
+              <option>Credit</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Discount %</label>
+            <input id="c-discount" type="number" min="0" max="100" value="0" oninput="updateSummary()"/>
+          </div>
+          <div class="field">
+            <label>GST Number (optional)</label>
+            <input id="c-gst" placeholder="e.g. 29AAACH7409R1Z1"/>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Address (optional)</label>
+            <textarea id="c-address" placeholder="Street, Area, City, PIN code…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barcode Scanner -->
+      <div class="card">
+        <div class="card-title">📷 Barcode Scanner</div>
+
+        <!-- USB Scanner input (always listening) -->
+        <div class="scan-bar">
+          <div class="scan-bar-left">
+            <div class="scan-label">USB / Handheld Scanner — point & scan</div>
+            <div class="scan-input-wrap">
+              <input id="barcode-input" placeholder="Scan barcode here or type barcode number…"
+                autocomplete="off" onkeydown="handleBarcodeKey(event)" oninput="handleBarcodeInput(this.value)"/>
+              <button class="btn-scan-cam" id="cam-btn" onclick="toggleCamera()">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+                </svg>
+                Camera Scan
+              </button>
+            </div>
+            <div class="scan-status">
+              <div class="scan-dot usb" id="scan-dot"></div>
+              <span id="scan-status-text" style="color:var(--muted)">Ready — USB scanner or camera</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product Search -->
+      <div class="card">
+        <div class="card-title">🔍 Add Products</div>
+        <div class="search-wrap">
+          <label>Search product by name or category</label>
+          <input id="product-search" placeholder="Type product name…" autocomplete="off"
+            oninput="searchProducts(this.value)"/>
+          <div class="dropdown" id="product-dropdown"></div>
+        </div>
+      </div>
+
+      <!-- Cart -->
+      <div class="card">
+        <div class="card-title">
+          🛒 Cart
+          <span id="cart-count" style="font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;color:var(--muted)">Empty</span>
+        </div>
+        <div id="cart-body">
+          <div class="cart-empty"><div class="cart-empty-icon">🛒</div><div>Add products above</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: SUMMARY -->
+    <div class="summary-panel">
+      <div class="card">
+        <div class="card-title">📋 Order Summary</div>
+        <div class="summary-rows">
+          <div class="sum-row"><span>Subtotal</span><span class="sum-val" id="sum-sub">₹0.00</span></div>
+          <div class="sum-row" id="disc-row" style="color:var(--danger);display:none">
+            <span>Discount (<span id="disc-pct">0</span>%)</span>
+            <span class="sum-val" id="sum-disc">-₹0.00</span>
+          </div>
+          <div class="sum-row total"><span>TOTAL</span><span class="sum-val" id="sum-total">₹0.00</span></div>
+          <div class="sum-row profit" style="margin-top:8px"><span>Est. Profit</span><span class="sum-val" id="sum-profit">₹0.00</span></div>
+          <div class="sum-row" style="font-size:12px"><span>Margin</span><span class="sum-val" id="sum-margin">0%</span></div>
+        </div>
+        <button class="btn btn-primary" onclick="generateBill()" id="bill-btn">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Generate Invoice
+        </button>
+        <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- RECEIPT MODAL -->
+<div class="overlay" id="receipt-overlay" onclick="closeIfOutside(event)">
+  <div class="modal">
+    <div id="print-area">
+      <div class="receipt" id="receipt-content"></div>
+    </div>
+    <!-- Action row 1: Print + Download PDF -->
+    <div class="modal-actions" style="margin-bottom:10px">
+      <button class="btn btn-print" onclick="window.print()" style="margin:0">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+        Print
+      </button>
+      <button class="btn btn-pdf" onclick="downloadPDF()" style="margin:0">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Download PDF
+      </button>
+    </div>
+
+    <!-- Action row 2: WhatsApp PDF + Close -->
+    <div class="modal-actions">
+      <button class="btn btn-wa" id="wa-btn" style="display:none;margin:0" onclick="sendPDFWhatsApp()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        <span id="wa-btn-label">WhatsApp PDF</span>
+      </button>
+      <button class="btn btn-secondary" onclick="closeReceipt()" style="margin:0;flex:0.5">Close</button>
+    </div>
+
+    <!-- Status message below buttons -->
+    <div id="wa-status" style="display:none;margin-top:10px;padding:10px 14px;border-radius:9px;font-size:12px;line-height:1.6"></div>
+  </div>
+</div>
+
+<!-- Camera overlay -->
+<div class="cam-overlay" id="cam-overlay">
+  <div class="cam-box">
+    <video id="cam-video" playsinline autoplay muted></video>
+    <div class="cam-aim"><div class="cam-aim-inner"></div></div>
+    <div class="cam-scanned-flash" id="cam-flash"></div>
+  </div>
+  <div class="cam-hint">Point camera at the barcode. Keep it steady inside the frame.</div>
+  <button class="btn-cam-close" onclick="stopCamera()">✕ Close Camera</button>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="shared.js"></script>
+<script>
+let cart = [], allProducts = [], lastData = null;
+const fmt = n => '₹' + parseFloat(n||0).toFixed(2);
+
+function toast(msg, type='ok'){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap'))
+    document.getElementById('product-dropdown').classList.remove('open');
+});
+
+async function fetchProducts(){
+  const r = await fetch('/api/products').catch(() => null);
+  if (r && r.ok) allProducts = await r.json();
+}
+
+// ── SEARCH ────────────────────────────────────────────────────────────────────
+function searchProducts(val){
+  const q = val.toLowerCase().trim();
+  const dd = document.getElementById('product-dropdown');
+  if (!q) { dd.classList.remove('open'); return; }
+  const hits = allProducts.filter(p =>
+    (p.name.toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q)) && p.quantity > 0
+  );
+  dd.innerHTML = hits.length
+    ? hits.map(p => `
+        <div class="drop-item" onclick="addToCart(${p.id})">
+          <div>
+            <div class="drop-name">${p.name}</div>
+            <div class="drop-meta">${p.category||''} · Stock: ${p.quantity}</div>
+          </div>
+          <div class="drop-price">${fmt(p.selling_price)}</div>
+        </div>`).join('')
+    : '<div class="drop-item" style="color:var(--muted);justify-content:center">No products found</div>';
+  dd.classList.add('open');
+}
+
+// ── CART ──────────────────────────────────────────────────────────────────────
+function addToCart(pid){
+  const p = allProducts.find(x => x.id === pid);
+  if (!p) return;
+  const ex = cart.find(c => c.id === pid);
+  if (ex){
+    if (ex.qty >= p.quantity){ toast(`Max stock (${p.quantity}) reached`,'err'); return; }
+    ex.qty++;
+  } else {
+    cart.push({id:p.id, name:p.name, qty:1, price:parseFloat(p.selling_price), cost:parseFloat(p.purchase_price), max:p.quantity});
+  }
+  document.getElementById('product-search').value = '';
+  document.getElementById('product-dropdown').classList.remove('open');
+  renderCart();
+}
+
+function changeQty(pid, d){
+  const item = cart.find(c => c.id === pid);
+  if (!item) return;
+  item.qty += d;
+  if (item.qty <= 0) cart = cart.filter(c => c.id !== pid);
+  else if (item.qty > item.max){ item.qty = item.max; toast('Max stock reached','err'); }
+  renderCart();
+}
+
+function removeItem(pid){ cart = cart.filter(c => c.id !== pid); renderCart(); }
+
+function clearAll(){
+  cart = [];
+  ['c-name','c-phone','c-gst','c-address'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('c-discount').value = '0';
+  document.getElementById('c-payment').value  = 'Cash';
+  renderCart();
+}
+
+function renderCart(){
+  document.getElementById('cart-count').textContent =
+    cart.length ? `${cart.length} item${cart.length!==1?'s':''}` : 'Empty';
+
+  if (!cart.length){
+    document.getElementById('cart-body').innerHTML =
+      '<div class="cart-empty"><div class="cart-empty-icon">🛒</div><div>Add products above</div></div>';
+    updateSummary(); return;
+  }
+
+  document.getElementById('cart-body').innerHTML = cart.map(i => `
+    <div class="cart-item">
+      <div class="ci-info">
+        <div class="ci-name">${i.name}</div>
+        <div class="ci-unit">${fmt(i.price)} each</div>
+      </div>
+      <div class="ci-qty">
+        <button class="qty-btn" onclick="changeQty(${i.id},-1)">−</button>
+        <span class="qty-num">${i.qty}</span>
+        <button class="qty-btn" onclick="changeQty(${i.id},1)">+</button>
+      </div>
+      <div class="ci-total">${fmt(i.price*i.qty)}</div>
+      <span class="ci-del" onclick="removeItem(${i.id})">×</span>
+    </div>`).join('');
+  updateSummary();
+}
+
+function updateSummary(){
+  const sub     = cart.reduce((s,i) => s + i.price*i.qty, 0);
+  const cost    = cart.reduce((s,i) => s + i.cost*i.qty, 0);
+  const discPct = parseFloat(document.getElementById('c-discount').value)||0;
+  const disc    = sub * (discPct/100);
+  const total   = sub - disc;
+  const profit  = total - cost;
+  const margin  = total>0 ? ((profit/total)*100).toFixed(1) : 0;
+
+  document.getElementById('sum-sub').textContent    = fmt(sub);
+  document.getElementById('disc-pct').textContent   = discPct;
+  document.getElementById('sum-disc').textContent   = '-'+fmt(disc);
+  document.getElementById('sum-total').textContent  = fmt(total);
+  document.getElementById('sum-profit').textContent = fmt(profit);
+  document.getElementById('sum-margin').textContent = margin+'%';
+  document.getElementById('disc-row').style.display = discPct>0 ? 'flex' : 'none';
+}
+
+// ── GENERATE ──────────────────────────────────────────────────────────────────
+async function generateBill(){
+  if (!cart.length){ toast('Cart is empty!','err'); return; }
+  const cName    = document.getElementById('c-name').value.trim()    || 'Walk-in Customer';
+  const cPhone   = document.getElementById('c-phone').value.trim();
+  const cGst     = document.getElementById('c-gst').value.trim();
+  const cAddress = document.getElementById('c-address').value.trim();
+  const cPayment = document.getElementById('c-payment').value;
+  const discPct  = parseFloat(document.getElementById('c-discount').value)||0;
+
+  const btn = document.getElementById('bill-btn');
+  btn.disabled = true; btn.innerHTML = '⏳ Generating…';
+
+  const res = await fetch('/api/bills', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      customer_name:cName, customer_phone:cPhone, customer_address:cAddress,
+      customer_gst:cGst, payment_mode:cPayment, discount_pct:discPct,
+      items: cart.map(i => ({product_id:i.id, quantity:i.qty}))
+    })
+  }).catch(() => null);
+
+  if (!res){ toast('Server error. Is Flask running?','err'); }
+  else {
+    const data = await res.json();
+    if (!res.ok){ toast(data.error||'Error','err'); }
+    else {
+      lastData = {...data, cName, cPhone, cGst, cAddress, cPayment, discPct};
+      buildReceipt(lastData);
+      await fetchProducts();
+      cart = []; renderCart();
+      toast('Invoice generated! 🎉');
+    }
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Generate Invoice`;
+}
+
+// ── RECEIPT ───────────────────────────────────────────────────────────────────
+function buildReceipt(d){
+  const now      = new Date();
+  const dateStr  = now.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  const timeStr  = now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  const subtotal = parseFloat(d.total_amount) / (1 - (d.discPct||0)/100);
+  const discAmt  = subtotal - parseFloat(d.total_amount);
+
+  const customerExtras = (d.cPhone || d.cAddress || d.cGst) ? `
+    <div class="r-cust-box">
+      <div class="r-cust-title">Bill To</div>
+      ${d.cPhone   ? `<div class="r-row"><span class="lbl">Phone</span><span class="val">${d.cPhone}</span></div>` : ''}
+      ${d.cAddress ? `<div class="r-row"><span class="lbl">Address</span><span class="val" style="max-width:200px;text-align:right">${d.cAddress.replace(/\n/g,'<br/>')}</span></div>` : ''}
+      ${d.cGst     ? `<div class="r-row"><span class="lbl">GSTIN</span><span class="val">${d.cGst}</span></div>` : ''}
+    </div>` : '';
+
+  const itemsHtml = d.items.map(i => `
+    <div class="r-item">
+      <span class="r-item-name">${i.product_name}</span>
+      <span class="r-item-qty">${i.quantity} × ${fmt(i.selling_price)}</span>
+      <span class="r-item-amt">${fmt(i.selling_price * i.quantity)}</span>
+    </div>`).join('');
+
+  document.getElementById('receipt-content').innerHTML = `
+    <div class="r-brand">STOCK SENSE</div>
+    <div class="r-sub">Supermarket Management System</div>
+    <div class="r-sub">📍 Your Store Address · 📞 Your Store Phone</div>
+    <div class="r-div thick"></div>
+
+    <div class="r-row"><span class="lbl">Invoice No.</span><span class="val">#${String(d.bill_id).padStart(5,'0')}</span></div>
+    <div class="r-row"><span class="lbl">Date</span><span class="val">${dateStr}</span></div>
+    <div class="r-row"><span class="lbl">Time</span><span class="val">${timeStr}</span></div>
+    <div class="r-row"><span class="lbl">Payment</span><span class="val">${d.cPayment}</span></div>
+
+    <div class="r-div"></div>
+    <div class="r-row"><span class="lbl">Customer</span><span class="val" style="font-size:14px">${d.cName}</span></div>
+    ${customerExtras}
+
+    <div class="r-div"></div>
+    <div class="r-col-heads"><span>Item</span><span style="text-align:center">Qty × Rate</span><span style="text-align:right">Amount</span></div>
+    <div class="r-div"></div>
+    ${itemsHtml}
+
+    <div class="r-totals">
+      <div class="r-div"></div>
+      <div class="r-row"><span class="lbl">Subtotal</span><span class="val">${fmt(subtotal)}</span></div>
+      ${d.discPct > 0 ? `<div class="r-row" style="color:#c00"><span class="lbl">Discount (${d.discPct}%)</span><span class="val">− ${fmt(discAmt)}</span></div>` : ''}
+      <div class="r-total-line"><span>TOTAL AMOUNT</span><span>${fmt(d.total_amount)}</span></div>
+    </div>
+
+    <div class="r-div"></div>
+    <div class="r-footer">
+      ✅ Amount Paid via ${d.cPayment}<br/>
+      Thank you for shopping with us! 🛒<br/>
+      Please visit again · Keep receipt for returns<br/>
+      <span style="font-size:10px">Powered by Stock Sense</span>
+    </div>
+  `;
+
+  // Show WhatsApp button only if phone entered
+  const waBtn = document.getElementById('wa-btn');
+  const waStatus = document.getElementById('wa-status');
+  waStatus.style.display = 'none';
+  if (d.cPhone && d.cPhone.length >= 10){
+    waBtn.style.display = 'flex';
+    document.getElementById('wa-btn-label').textContent = 'WhatsApp PDF';
+  } else {
+    waBtn.style.display = 'none';
+  }
+
+  document.getElementById('receipt-overlay').classList.add('open');
+}
+
+// ── BUILD PDF BLOB (shared by download + share) ───────────────────────────────
+function buildPDFDoc(d){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:[80, 297], orientation:'portrait' });
+
+  const now     = new Date();
+  const dateStr = now.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  const timeStr = now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  const subtotal = parseFloat(d.total_amount) / (1 - (d.discPct||0)/100);
+  const discAmt  = subtotal - parseFloat(d.total_amount);
+
+  const W = 80, margin = 5, col2 = W - margin;
+  let y = 8;
+
+  const ln  = (x1,y1,x2,y2,lw=0.2) => { doc.setLineWidth(lw); doc.line(x1,y1,x2,y2); };
+  const dash = yp => {
+    doc.setLineDashPattern([1,1],0); ln(margin,yp,col2,yp,0.15); doc.setLineDashPattern([],0);
+  };
+  const bold  = on  => doc.setFont('helvetica', on ? 'bold' : 'normal');
+  const sz    = n   => doc.setFontSize(n);
+  const clr   = (r,g,b) => doc.setTextColor(r,g,b);
+  const txt   = (s,x,yp,opts={}) => doc.text(s,x,yp,opts);
+
+  // Header
+  bold(true); sz(16); clr(0,0,0);
+  txt('STOCK SENSE', W/2, y, {align:'center'}); y+=5;
+  bold(false); sz(7); clr(100,100,100);
+  txt('Supermarket Management System', W/2, y, {align:'center'}); y+=4;
+  txt('Your Store Address  |  Ph: Your Number', W/2, y, {align:'center'}); y+=5;
+  ln(margin, y, col2, y, 0.5); y+=4;
+
+  // Invoice meta
+  sz(8);
+  [['Invoice No.', '#'+String(d.bill_id).padStart(5,'0'), true],
+   ['Date', dateStr, false],
+   ['Time', timeStr, false],
+   ['Payment', d.cPayment, true]
+  ].forEach(([label, val, valBold]) => {
+    bold(false); clr(120,120,120); txt(label, margin, y);
+    if(valBold) bold(true); else bold(false); clr(0,0,0); txt(val, col2, y, {align:'right'});
+    y += 4.5;
+  });
+  y+=1; dash(y); y+=4;
+
+  // Customer
+  bold(false); clr(120,120,120); sz(7); txt('Customer', margin, y); y+=4;
+  bold(true); clr(0,0,0); sz(9); txt(d.cName, margin, y); y+=5;
+  bold(false); sz(7.5); clr(60,60,60);
+  if (d.cPhone)   { txt('Ph: '+d.cPhone,    margin, y); y+=4; }
+  if (d.cGst)     { txt('GSTIN: '+d.cGst,   margin, y); y+=4; }
+  if (d.cAddress) {
+    const lines = doc.splitTextToSize('Addr: '+d.cAddress, W-margin*2);
+    doc.text(lines, margin, y); y += lines.length*4;
+  }
+  y+=1; dash(y); y+=4;
+
+  // Items header
+  sz(7); clr(150,150,150); bold(false);
+  txt('ITEM', margin, y); txt('QTY x RATE', W/2, y, {align:'center'}); txt('AMOUNT', col2, y, {align:'right'});
+  y+=3; dash(y); y+=4;
+
+  // Items
+  sz(8); clr(0,0,0);
+  d.items.forEach(item => {
+    const amt      = (item.selling_price * item.quantity).toFixed(2);
+    const qtyRate  = `${item.quantity} x Rs.${parseFloat(item.selling_price).toFixed(2)}`;
+    const nameLines = doc.splitTextToSize(item.product_name, 36);
+    bold(true); doc.text(nameLines, margin, y);
+    bold(false); clr(80,80,80); txt(qtyRate, W/2, y, {align:'center'});
+    bold(true); clr(0,0,0); txt('Rs.'+amt, col2, y, {align:'right'});
+    y += nameLines.length * 4.5;
+  });
+
+  dash(y); y+=4;
+
+  // Totals
+  sz(8); bold(false); clr(100,100,100);
+  txt('Subtotal', margin, y); clr(0,0,0); txt('Rs.'+subtotal.toFixed(2), col2, y, {align:'right'}); y+=4.5;
+  if (d.discPct > 0){
+    clr(180,0,0);
+    txt(`Discount (${d.discPct}%)`, margin, y); txt('- Rs.'+discAmt.toFixed(2), col2, y, {align:'right'}); y+=4.5;
+  }
+  ln(margin, y, col2, y, 0.5); y+=4;
+  bold(true); sz(10); clr(0,0,0);
+  txt('TOTAL', margin, y); txt('Rs.'+parseFloat(d.total_amount).toFixed(2), col2, y, {align:'right'}); y+=7;
+
+  // Footer
+  dash(y); y+=4;
+  bold(false); sz(7); clr(120,120,120);
+  txt('Payment received via '+d.cPayment, W/2, y, {align:'center'}); y+=4;
+  txt('Thank you for shopping with us!',   W/2, y, {align:'center'}); y+=4;
+  txt('Please keep this receipt for returns', W/2, y, {align:'center'}); y+=4;
+  sz(6); clr(170,170,170); txt('Powered by Stock Sense', W/2, y, {align:'center'});
+
+  return doc;
+}
+
+function getPDFFilename(d){
+  return `Invoice_${String(d.bill_id).padStart(5,'0')}_${d.cName.replace(/\s+/g,'_')}.pdf`;
+}
+
+// ── DOWNLOAD PDF ──────────────────────────────────────────────────────────────
+function downloadPDF(){
+  if (!lastData) return;
+  buildPDFDoc(lastData).save(getPDFFilename(lastData));
+  toast('PDF downloaded! ✅');
+}
+
+// ── SEND PDF VIA WHATSAPP ─────────────────────────────────────────────────────
+async function sendPDFWhatsApp(){
+  if (!lastData) return;
+  const d = lastData;
+  const btn    = document.getElementById('wa-btn');
+  const label  = document.getElementById('wa-btn-label');
+  const status = document.getElementById('wa-status');
+
+  label.textContent = 'Preparing PDF…';
+  btn.disabled = true;
+
+  try {
+    // 1. Build PDF and get as blob
+    const doc      = buildPDFDoc(d);
+    const pdfBlob  = doc.output('blob');
+    const filename = getPDFFilename(d);
+    const file     = new File([pdfBlob], filename, { type:'application/pdf' });
+
+    // 2. Try Web Share API (works on Android Chrome / mobile)
+    if (navigator.canShare && navigator.canShare({ files:[file] })){
+      await navigator.share({
+        files: [file],
+        title: `Invoice #${String(d.bill_id).padStart(5,'0')} - ${d.cName}`,
+        text:  `Invoice from Stock Sense for ${d.cName}. Total: Rs.${parseFloat(d.total_amount).toFixed(2)}`
+      });
+      toast('Invoice shared successfully! 🎉');
+      status.style.display = 'none';
+
+    } else {
+      // 3. Fallback for desktop: auto-download PDF + open WhatsApp Web
+      doc.save(filename);
+
+      // Build WhatsApp text message
+      const msg = buildWAText(d);
+      const waUrl = d.cPhone && d.cPhone.length >= 10
+        ? `https://wa.me/91${d.cPhone}?text=${encodeURIComponent(msg)}`
+        : `https://web.whatsapp.com/`;
+      window.open(waUrl, '_blank');
+
+      // Show helpful instruction
+      status.style.display = 'block';
+      status.style.background = 'rgba(0,136,255,.08)';
+      status.style.border     = '1px solid rgba(0,136,255,.25)';
+      status.style.color      = '#90cdf4';
+      status.innerHTML =
+        `📄 <strong>PDF saved</strong> as <code style="background:rgba(255,255,255,.1);padding:1px 5px;border-radius:4px">${filename}</code><br/>
+         WhatsApp is opening. In the chat, tap the <strong>📎 attachment icon</strong> → <strong>Document</strong> → select the saved PDF to send it directly.`;
+    }
+  } catch(err){
+    if (err.name !== 'AbortError'){
+      toast('Could not share. PDF downloaded instead.', 'err');
+      buildPDFDoc(d).save(getPDFFilename(d));
+    }
+  }
+
+  label.textContent = 'WhatsApp PDF';
+  btn.disabled = false;
+}
+
+function buildWAText(d){
+  const subtotal = parseFloat(d.total_amount) / (1-(d.discPct||0)/100);
+  return [
+    `🧾 *Invoice from Stock Sense*`,
+    `━━━━━━━━━━━━━━━━━`,
+    `Invoice #: ${String(d.bill_id).padStart(5,'0')}`,
+    `Customer: *${d.cName}*`,
+    `Payment: ${d.cPayment}`,
+    ``,
+    `*Items:*`,
+    ...d.items.map(i=>`• ${i.product_name} x${i.quantity} = Rs.${(i.selling_price*i.quantity).toFixed(2)}`),
+    ``,
+    d.discPct > 0 ? `Subtotal: Rs.${subtotal.toFixed(2)}\nDiscount (${d.discPct}%): -Rs.${(subtotal-parseFloat(d.total_amount)).toFixed(2)}` : null,
+    `*Total: Rs.${parseFloat(d.total_amount).toFixed(2)}*`,
+    ``,
+    `📎 Invoice PDF is attached.`,
+    `_Thank you for shopping with us!_ 🛒`,
+  ].filter(l=>l!==null).join('\n');
+}
+
+
+function closeReceipt(){ document.getElementById('receipt-overlay').classList.remove('open'); }
+function closeIfOutside(e){ if (e.target === document.getElementById('receipt-overlay')) closeReceipt(); }
+
+// ── BARCODE SCANNING ──────────────────────────────────────────────────────────
+let usbBuffer = '', usbTimer = null;
+let codeReader = null, cameraActive = false;
+
+// USB: collect keypresses, trigger on Enter or 120ms gap
+function handleBarcodeKey(e){
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    const code = document.getElementById('barcode-input').value.trim();
+    if(code) processBarcode(code);
+  }
+}
+function handleBarcodeInput(val){
+  clearTimeout(usbTimer);
+  if(val.length >= 3){
+    usbTimer = setTimeout(() => processBarcode(val.trim()), 120);
+  }
+}
+
+// Global listener — captures USB scanner even when input not focused
+let gBuf = '', gTimer = null;
+document.addEventListener('keydown', e => {
+  const tag = document.activeElement.tagName;
+  const isBarcodeField = document.activeElement.id === 'barcode-input';
+  if((tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT') && !isBarcodeField) return;
+  if(e.key === 'Enter'){ if(gBuf.length >= 3){ processBarcode(gBuf); } gBuf=''; return; }
+  if(e.key.length === 1){
+    gBuf += e.key;
+    clearTimeout(gTimer);
+    gTimer = setTimeout(() => { gBuf = ''; }, 150);
+  }
+});
+
+function processBarcode(code){
+  setScanStatus('searching', `Scanning: ${code}…`);
+  document.getElementById('barcode-input').value = '';
+
+  const product = allProducts.find(p =>
+    (p.barcode && p.barcode === code) ||
+    p.name.toLowerCase() === code.toLowerCase()
+  ) || allProducts.find(p => p.name.toLowerCase().includes(code.toLowerCase()));
+
+  if(product){
+    if(product.quantity <= 0){
+      setScanStatus('error', `Out of stock: ${product.name}`);
+      toast(`${product.name} — Out of stock!`, 'err'); return;
+    }
+    addToCart(product.id);
+    setScanStatus('found', `✓ Added to cart: ${product.name}`);
+    // Camera flash
+    const flash = document.getElementById('cam-flash');
+    if(flash){ flash.classList.add('flash'); setTimeout(()=>flash.classList.remove('flash'),400); }
+    if(cameraActive) setTimeout(stopCamera, 700);
+    toast(`✓ ${product.name} added to cart`, 'ok');
+  } else {
+    setScanStatus('error', `Not found: "${code}"`);
+    toast(`Barcode not found in inventory`, 'err');
+  }
+}
+
+function setScanStatus(state, msg){
+  const dot = document.getElementById('scan-dot');
+  const txt = document.getElementById('scan-status-text');
+  dot.className = 'scan-dot ' + ({cam:'cam',found:'found',error:'error',usb:'usb'}[state]||'usb');
+  txt.textContent = msg;
+  txt.style.color = state==='found'?'var(--accent)':state==='error'?'var(--danger)':state==='cam'?'var(--accent)':'var(--muted)';
+}
+
+// Camera
+async function toggleCamera(){ cameraActive ? stopCamera() : startCamera(); }
+
+async function startCamera(){
+  try {
+    if(!window.ZXing){ toast('Loading camera library…','ok'); }
+    const ZXing = window.ZXing;
+    if(!ZXing){ toast('ZXing not loaded yet, try again','err'); return; }
+    codeReader = new ZXing.BrowserMultiFormatReader();
+    document.getElementById('cam-overlay').classList.add('open');
+    document.getElementById('cam-btn').classList.add('active');
+    document.getElementById('cam-btn').innerHTML =
+      `<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg> Stop`;
+    cameraActive = true;
+    setScanStatus('cam','Camera active — aim at barcode…');
+    const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
+    const back = devices.find(d=>/back|rear|environment/i.test(d.label)) || devices[0];
+    await codeReader.decodeFromVideoDevice(back?.deviceId, 'cam-video', (result, err) => {
+      if(result) processBarcode(result.getText());
+    });
+  } catch(err){
+    setScanStatus('error','Camera unavailable');
+    toast('Camera access denied. Check browser permissions.','err');
+    stopCamera();
+  }
+}
+
+function stopCamera(){
+  try { if(codeReader) codeReader.reset(); } catch(e){}
+  codeReader = null; cameraActive = false;
+  document.getElementById('cam-overlay').classList.remove('open');
+  document.getElementById('cam-btn').classList.remove('active');
+  document.getElementById('cam-btn').innerHTML =
+    `<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg> Camera Scan`;
+  setScanStatus('usb','Ready — USB or camera');
+}
+document.addEventListener('keydown', e => { if(e.key==='Escape' && cameraActive) stopCamera(); });
+
+fetchProducts();
+updateSummary();
+</script>
+</body>
+</html>

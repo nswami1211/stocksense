@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Smart Alerts — Stock Sense</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080b10;--surface:#0e1219;--card:#141820;--border:#1f2630;--accent:#00ff88;--accent2:#0088ff;--text:#e2e8f0;--muted:#4a5568;--danger:#ff4466;--warn:#ffaa00;}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;display:flex}
+.sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;flex-shrink:0}
+.sidebar-logo{padding:28px 24px 24px;border-bottom:1px solid var(--border)}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.06em;background:linear-gradient(135deg,#fff,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-sub{font-size:11px;color:var(--muted);margin-top:2px;font-family:'JetBrains Mono',monospace}
+nav{padding:16px 12px;flex:1}
+.nav-section{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding:12px 12px 6px;font-family:'JetBrains Mono',monospace}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted);transition:.15s;margin-bottom:2px;text-decoration:none}
+.nav-item:hover{color:var(--text);background:var(--card)}
+.nav-item.active{color:var(--accent);background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.1)}
+.sidebar-bottom{padding:16px 12px;border-top:1px solid var(--border)}
+.user-badge{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border-radius:10px;border:1px solid var(--border)}
+.user-avatar{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#000;flex-shrink:0}
+.user-name{font-size:13px;font-weight:600}
+.user-role{font-size:11px;color:var(--muted)}
+
+.main{flex:1;padding:32px;overflow-y:auto}
+.page-title{font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:.04em}
+.page-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+
+/* Summary cards */
+.summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.sc{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center}
+.sc-val{font-family:'Bebas Neue',sans-serif;font-size:40px;line-height:1}
+.sc.red .sc-val{color:var(--danger)}
+.sc.warn .sc-val{color:var(--warn)}
+.sc.blue .sc-val{color:var(--accent2)}
+.sc.green .sc-val{color:var(--accent)}
+.sc-lbl{font-size:12px;color:var(--muted);margin-top:6px}
+
+/* Safe state */
+.safe-banner{
+  background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.2);border-radius:16px;
+  padding:48px;text-align:center;
+}
+.safe-icon{font-size:64px;margin-bottom:16px}
+.safe-title{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--accent);letter-spacing:.05em;margin-bottom:8px}
+.safe-sub{color:var(--muted);font-size:15px}
+
+/* Alert sections */
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.section-count{font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;padding:3px 10px;border-radius:20px}
+.sec-expired .section-count{background:rgba(255,68,102,.15);color:var(--danger)}
+.sec-critical .section-count{background:rgba(255,170,0,.15);color:var(--warn)}
+.sec-warning .section-count{background:rgba(0,136,255,.15);color:var(--accent2)}
+
+.alert-section{margin-bottom:28px}
+
+/* Alert cards */
+.alert-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.alert-card{
+  border-radius:14px;padding:18px;border:1px solid;position:relative;overflow:hidden;
+  transition:.2s;cursor:default;
+}
+.alert-card:hover{transform:translateY(-2px)}
+.alert-card.expired{background:rgba(255,68,102,.05);border-color:rgba(255,68,102,.25)}
+.alert-card.critical{background:rgba(255,170,0,.05);border-color:rgba(255,170,0,.25)}
+.alert-card.warning{background:rgba(0,136,255,.05);border-color:rgba(0,136,255,.2)}
+
+.alert-card::before{
+  content:'';position:absolute;top:0;left:0;width:4px;height:100%;
+}
+.alert-card.expired::before{background:var(--danger)}
+.alert-card.critical::before{background:var(--warn)}
+.alert-card.warning::before{background:var(--accent2)}
+
+.ac-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.ac-name{font-size:15px;font-weight:700;flex:1;padding-right:10px;line-height:1.3}
+.ac-days{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1}
+.alert-card.expired .ac-days{color:var(--danger)}
+.alert-card.critical .ac-days{color:var(--warn)}
+.alert-card.warning .ac-days{color:var(--accent2)}
+
+.ac-meta{display:flex;gap:12px;font-size:12px;color:var(--muted);margin-bottom:12px}
+.ac-meta span{display:flex;align-items:center;gap:4px}
+.ac-expiry{font-family:'JetBrains Mono',monospace;font-size:12px;padding:4px 10px;border-radius:6px}
+.alert-card.expired .ac-expiry{background:rgba(255,68,102,.15);color:var(--danger)}
+.alert-card.critical .ac-expiry{background:rgba(255,170,0,.15);color:var(--warn)}
+.alert-card.warning .ac-expiry{background:rgba(0,136,255,.15);color:var(--accent2)}
+
+.ac-action{
+  font-size:12px;padding:7px 12px;border-radius:7px;border:1px solid;
+  display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+  font-family:'Outfit',sans-serif;font-weight:600;transition:.15s;text-decoration:none;
+}
+.alert-card.expired .ac-action{border-color:rgba(255,68,102,.3);color:var(--danger);background:rgba(255,68,102,.08)}
+.alert-card.expired .ac-action:hover{background:rgba(255,68,102,.15)}
+.alert-card.critical .ac-action{border-color:rgba(255,170,0,.3);color:var(--warn);background:rgba(255,170,0,.08)}
+.alert-card.critical .ac-action:hover{background:rgba(255,170,0,.15)}
+.alert-card.warning .ac-action{border-color:rgba(0,136,255,.3);color:var(--accent2);background:rgba(0,136,255,.08)}
+.alert-card.warning .ac-action:hover{background:rgba(0,136,255,.15)}
+
+/* Pulse dot */
+.pulse-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.expired .pulse-dot{background:var(--danger);animation:blink 1s infinite}
+.critical .pulse-dot{background:var(--warn);animation:blink 1.5s infinite}
+.warning .pulse-dot{background:var(--accent2)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* Filter */
+.filter-bar{display:flex;gap:10px;margin-bottom:20px;align-items:center}
+.filter-btn{padding:7px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer;transition:.15s;font-family:'Outfit',sans-serif}
+.filter-btn:hover{border-color:var(--text);color:var(--text)}
+.filter-btn.active{background:rgba(0,255,136,.08);border-color:var(--accent);color:var(--accent)}
+.filter-lbl{font-size:13px;color:var(--muted)}
+
+.loading{color:var(--muted);font-size:14px;padding:40px;text-align:center}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">Stock Sense</div>
+    <div class="logo-sub">Management OS</div>
+  </div>
+  <nav>
+    <div class="nav-section">Main</div>
+    <a href="home.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Dashboard
+    </a>
+    <div class="nav-section">Modules</div>
+    <a href="billing.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Billing
+    </a>
+    <a href="inventory.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+      Inventory
+    </a>
+    <a href="profit.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+      Profit
+    </a>
+    <a href="alerts.html" class="nav-item active">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      Alerts
+    </a>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="user-badge">
+      <div class="user-avatar" id="avatar-char">O</div>
+      <div><div class="user-name" id="user-display">Owner</div><div class="user-role">Store Manager</div></div>
+    </div>
+    <a href="/logout" style="display:flex;align-items:center;gap:8px;padding:10px 12px;color:var(--muted);font-size:13px;text-decoration:none;margin-top:8px;border-radius:8px;transition:.15s" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--muted)'">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      Logout
+    </a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-title">SMART ALERTS</div>
+  <div class="page-sub">Expiry tracking — catch losses before they happen</div>
+
+  <!-- Summary -->
+  <div class="summary-row">
+    <div class="sc red"><div class="sc-val" id="cnt-expired">0</div><div class="sc-lbl">🔴 Already Expired</div></div>
+    <div class="sc warn"><div class="sc-val" id="cnt-critical">0</div><div class="sc-lbl">🟡 Critical (≤7 days)</div></div>
+    <div class="sc blue"><div class="sc-val" id="cnt-warning">0</div><div class="sc-lbl">🔵 Warning (≤30 days)</div></div>
+    <div class="sc green"><div class="sc-val" id="cnt-safe">—</div><div class="sc-lbl">✅ Safe Products</div></div>
+  </div>
+
+  <!-- Filter -->
+  <div class="filter-bar">
+    <span class="filter-lbl">Show:</span>
+    <button class="filter-btn active" onclick="setFilter('all',this)">All Alerts</button>
+    <button class="filter-btn" onclick="setFilter('expired',this)">Expired</button>
+    <button class="filter-btn" onclick="setFilter('critical',this)">Critical</button>
+    <button class="filter-btn" onclick="setFilter('warning',this)">Warning</button>
+  </div>
+
+  <!-- Alert content -->
+  <div id="alert-content"><div class="loading">Loading alerts…</div></div>
+</main>
+
+<script src="shared.js"></script>
+<script>
+let allAlerts = [];
+let allProducts = [];
+let activeFilter = 'all';
+
+async function load(){
+  const [ar, pr] = await Promise.all([fetch('/api/alerts'), fetch('/api/products')]);
+  allAlerts   = await ar.json();
+  allProducts = await pr.json();
+
+  const expired  = allAlerts.filter(a => a.days_left < 0);
+  const critical = allAlerts.filter(a => a.days_left >= 0 && a.days_left <= 7);
+  const warning  = allAlerts.filter(a => a.days_left > 7);
+  const safe     = allProducts.filter(p => {
+    if (!p.expiry_date) return true;
+    const d = Math.ceil((new Date(p.expiry_date) - new Date()) / 86400000);
+    return d > 30;
+  }).length;
+
+  document.getElementById('cnt-expired').textContent  = expired.length;
+  document.getElementById('cnt-critical').textContent = critical.length;
+  document.getElementById('cnt-warning').textContent  = warning.length;
+  document.getElementById('cnt-safe').textContent     = safe;
+
+  renderAlerts();
+}
+
+function setFilter(f, el){
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderAlerts();
+}
+
+function renderAlerts(){
+  const wrap = document.getElementById('alert-content');
+  if (!allAlerts.length){
+    wrap.innerHTML = `
+      <div class="safe-banner">
+        <div class="safe-icon">✅</div>
+        <div class="safe-title">All Products Are Safe!</div>
+        <div class="safe-sub">No products are expiring within the next 30 days. Great stock management!</div>
+      </div>`;
+    return;
+  }
+
+  const expired  = allAlerts.filter(a => a.days_left < 0);
+  const critical = allAlerts.filter(a => a.days_left >= 0 && a.days_left <= 7);
+  const warning  = allAlerts.filter(a => a.days_left > 7);
+
+  let html = '';
+
+  if (activeFilter === 'all' || activeFilter === 'expired') {
+    if (expired.length) html += renderSection('🔴 Expired Products', expired, 'expired', 'expired');
+  }
+  if (activeFilter === 'all' || activeFilter === 'critical') {
+    if (critical.length) html += renderSection('🟡 Critical — Expires Within 7 Days', critical, 'critical', 'critical');
+  }
+  if (activeFilter === 'all' || activeFilter === 'warning') {
+    if (warning.length) html += renderSection('🔵 Warning — Expires Within 30 Days', warning, 'warning', 'warning');
+  }
+  if (!html) html = `<div class="safe-banner"><div class="safe-icon">🔍</div><div class="safe-title">No alerts in this category</div></div>`;
+
+  wrap.innerHTML = html;
+}
+
+function renderSection(title, items, sectionCls, cardCls){
+  const cards = items.map(a => renderCard(a, cardCls)).join('');
+  return `
+    <div class="alert-section sec-${sectionCls}">
+      <div class="section-title">
+        <span class="pulse-dot ${sectionCls}"></span>
+        ${title}
+        <span class="section-count">${items.length} item${items.length!==1?'s':''}</span>
+      </div>
+      <div class="alert-cards">${cards}</div>
+    </div>`;
+}
+
+function renderCard(a, cls){
+  const d = a.days_left;
+  const daysLabel = d < 0 ? `${Math.abs(d)}D AGO` : d === 0 ? 'TODAY' : `${d}D LEFT`;
+  const action = d < 0
+    ? '⚠️ Remove from stock'
+    : d <= 7
+    ? '🏷️ Discount to sell fast'
+    : '👀 Monitor closely';
+  const actionHref = `inventory.html`;
+  return `
+    <div class="alert-card ${cls}">
+      <div class="ac-head">
+        <div class="ac-name">${a.name}</div>
+        <div class="ac-days">${daysLabel}</div>
+      </div>
+      <div class="ac-meta">
+        <span>📦 ${a.quantity} units</span>
+        ${a.category ? `<span>🏷️ ${a.category}</span>` : ''}
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="ac-expiry">Exp: ${a.expiry_date}</span>
+        <a href="${actionHref}" class="ac-action">${action}</a>
+      </div>
+    </div>`;
+}
+
+load();
+</script>
+</body>
+</html>

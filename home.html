@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dashboard — Stock Sense</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080b10;--surface:#0e1219;--card:#141820;--border:#1f2630;--accent:#00ff88;--accent2:#0088ff;--text:#e2e8f0;--muted:#4a5568;--danger:#ff4466;--warn:#ffaa00;}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;display:flex}
+.sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;flex-shrink:0}
+.sidebar-logo{padding:28px 24px 24px;border-bottom:1px solid var(--border)}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.06em;background:linear-gradient(135deg,#fff,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-sub{font-size:11px;color:var(--muted);margin-top:2px;font-family:'JetBrains Mono',monospace}
+nav{padding:16px 12px;flex:1}
+.nav-section{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding:12px 12px 6px;font-family:'JetBrains Mono',monospace}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted);transition:.15s;margin-bottom:2px;text-decoration:none}
+.nav-item:hover{color:var(--text);background:var(--card)}
+.nav-item.active{color:var(--accent);background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.1)}
+.sidebar-bottom{padding:16px 12px;border-top:1px solid var(--border)}
+.user-badge{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border-radius:10px;border:1px solid var(--border)}
+.user-avatar{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#000;flex-shrink:0}
+.user-name{font-size:13px;font-weight:600}.user-role{font-size:11px;color:var(--muted)}
+.main{flex:1;overflow-y:auto;padding:32px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+.page-title{font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:.04em}
+.page-date{font-size:13px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;transition:.2s}
+.stat-card:hover{border-color:rgba(0,255,136,.15);transform:translateY(-2px)}
+.stat-icon{font-size:24px;margin-bottom:14px}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:.02em;line-height:1}
+.stat-card.green .stat-val{color:var(--accent)}.stat-card.blue .stat-val{color:var(--accent2)}
+.stat-card.warn .stat-val{color:var(--warn)}.stat-card.red .stat-val{color:var(--danger)}
+.stat-lbl{font-size:12px;color:var(--muted);margin-top:6px}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:4px;font-family:'JetBrains Mono',monospace}
+.modules-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.module-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;cursor:pointer;text-decoration:none;color:inherit;transition:.2s;display:block;position:relative;overflow:hidden}
+.module-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--c1),var(--c2));opacity:0;transition:.2s}
+.module-card:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(0,0,0,.4)}.module-card:hover::before{opacity:1}
+.module-card.m1{--c1:var(--accent);--c2:var(--accent2)}.module-card.m2{--c1:var(--accent2);--c2:#aa44ff}
+.module-card.m3{--c1:var(--warn);--c2:var(--danger)}.module-card.m4{--c1:#aa44ff;--c2:var(--danger)}
+.module-icon{font-size:24px;margin-bottom:12px}
+.module-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.module-desc{font-size:12px;color:var(--muted);line-height:1.4}
+.section-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:18px}
+.section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.04em}
+.see-all{font-size:13px;color:var(--accent2);text-decoration:none;font-weight:500}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:8px 12px;text-align:left;font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.03);vertical-align:middle}
+tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:rgba(0,255,136,.1);color:var(--accent)}.badge-red{background:rgba(255,68,102,.1);color:var(--danger)}.badge-warn{background:rgba(255,170,0,.1);color:var(--warn)}
+.mono{font-family:'JetBrains Mono',monospace;font-size:12px}
+.alerts-strip{display:flex;gap:10px;margin-bottom:24px;overflow-x:auto;padding-bottom:4px}
+.alert-chip{flex-shrink:0;display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 14px;font-size:13px;white-space:nowrap}
+.alert-chip.red{border-color:rgba(255,68,102,.3);background:rgba(255,68,102,.05)}.alert-chip.warn{border-color:rgba(255,170,0,.3);background:rgba(255,170,0,.05)}
+.alert-dot{width:7px;height:7px;border-radius:50%}
+.alert-chip.red .alert-dot{background:var(--danger);animation:blink 1.2s infinite}.alert-chip.warn .alert-dot{background:var(--warn)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-text">Stock Sense</div><div class="logo-sub">Management OS</div></div>
+  <nav>
+    <div class="nav-section">Main</div>
+    <a href="home.html" class="nav-item active">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Dashboard
+    </a>
+    <div class="nav-section">Modules</div>
+    <a href="billing.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Billing
+    </a>
+    <a href="inventory.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+      Inventory
+    </a>
+    <a href="profit.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+      Profit Tracking
+    </a>
+    <a href="alerts.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      Smart Alerts <span id="alert-badge" style="display:none;background:var(--danger);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:auto;font-family:'Outfit',sans-serif"></span>
+    </a>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="user-badge">
+      <div class="user-avatar" id="avatar-char">O</div>
+      <div><div class="user-name" id="user-display">Owner</div><div class="user-role">Store Manager</div></div>
+    </div>
+    <a href="/logout" style="display:flex;align-items:center;gap:8px;padding:10px 12px;color:var(--muted);font-size:13px;text-decoration:none;margin-top:8px;border-radius:8px;transition:.15s" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--muted)'">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      Logout
+    </a>
+  </div>
+</aside>
+<main class="main">
+  <div class="topbar">
+    <div><div class="page-title">DASHBOARD</div><div class="page-date" id="today-date"></div></div>
+  </div>
+  <div class="alerts-strip" id="alerts-strip"><div class="alert-chip" style="color:var(--muted)">Checking alerts…</div></div>
+  <div class="stats-grid">
+    <div class="stat-card green"><div class="stat-icon">💰</div><div class="stat-val" id="s-daily-profit">₹0</div><div class="stat-lbl">Today's Profit</div><div class="stat-sub" id="s-daily-rev">Revenue: ₹0</div></div>
+    <div class="stat-card blue"><div class="stat-icon">📊</div><div class="stat-val" id="s-monthly-profit">₹0</div><div class="stat-lbl">Monthly Profit</div><div class="stat-sub" id="s-monthly-rev">Revenue: ₹0</div></div>
+    <div class="stat-card warn"><div class="stat-icon">🧾</div><div class="stat-val" id="s-bills">0</div><div class="stat-lbl">Bills Today</div><div class="stat-sub" id="s-bills-month">This month: 0</div></div>
+    <div class="stat-card red"><div class="stat-icon">⚠️</div><div class="stat-val" id="s-alerts">0</div><div class="stat-lbl">Expiry Alerts</div><div class="stat-sub">Products near expiry</div></div>
+  </div>
+  <div class="modules-grid">
+    <a href="billing.html" class="module-card m1"><div class="module-icon">🧾</div><div class="module-title">Billing</div><div class="module-desc">Generate invoices, manage sales</div></a>
+    <a href="inventory.html" class="module-card m2"><div class="module-icon">📦</div><div class="module-title">Inventory</div><div class="module-desc">Add, edit and delete products</div></a>
+    <a href="profit.html" class="module-card m3"><div class="module-icon">📈</div><div class="module-title">Profit Tracking</div><div class="module-desc">Charts, margins and analytics</div></a>
+    <a href="alerts.html" class="module-card m4"><div class="module-icon">🔔</div><div class="module-title">Smart Alerts</div><div class="module-desc">Expiry warnings and actions</div></a>
+  </div>
+  <div class="grid2">
+    <div class="section-card">
+      <div class="section-head"><span class="section-title">RECENT BILLS</span><a href="billing.html" class="see-all">New bill →</a></div>
+      <table><thead><tr><th>#</th><th>Customer</th><th>Total</th><th>Profit</th><th>Time</th></tr></thead>
+      <tbody id="recent-bills"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr></tbody></table>
+    </div>
+    <div class="section-card">
+      <div class="section-head"><span class="section-title">EXPIRY ALERTS</span><a href="alerts.html" class="see-all">View all →</a></div>
+      <table><thead><tr><th>Product</th><th>Stock</th><th>Status</th></tr></thead>
+      <tbody id="alerts-table"><tr><td colspan="3" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr></tbody></table>
+    </div>
+  </div>
+</main>
+<script src="shared.js"></script>
+<script>
+document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+const fmt = n => '₹' + parseFloat(n||0).toFixed(2);
+async function loadDashboard(){
+  try {
+    const r = await fetch('/api/profit/summary'); const d = await r.json();
+    document.getElementById('s-daily-profit').textContent  = fmt(d.daily.profit);
+    document.getElementById('s-daily-rev').textContent     = 'Revenue: '+fmt(d.daily.revenue);
+    document.getElementById('s-monthly-profit').textContent= fmt(d.monthly.profit);
+    document.getElementById('s-monthly-rev').textContent   = 'Revenue: '+fmt(d.monthly.revenue);
+    document.getElementById('s-bills').textContent         = d.daily.bills;
+    document.getElementById('s-bills-month').textContent   = 'This month: '+d.monthly.bills;
+  } catch(e){}
+  try {
+    const r = await fetch('/api/alerts'); const alerts = await r.json();
+    document.getElementById('s-alerts').textContent = alerts.length;
+    const badge = document.getElementById('alert-badge');
+    if (alerts.length){ badge.textContent=alerts.length; badge.style.display='inline'; }
+    const strip = document.getElementById('alerts-strip');
+    strip.innerHTML = !alerts.length
+      ? '<div class="alert-chip" style="color:var(--accent)"><div class="alert-dot" style="background:var(--accent)"></div>All products safe ✓</div>'
+      : alerts.slice(0,6).map(a=>{
+          const cls = a.days_left<0?'red':'warn';
+          const lbl = a.days_left<0?`${a.name} EXPIRED`:`${a.name} — ${a.days_left}d left`;
+          return `<a href="alerts.html" class="alert-chip ${cls}" style="text-decoration:none;color:inherit"><div class="alert-dot"></div>${lbl}</a>`;
+        }).join('');
+    const tbody = document.getElementById('alerts-table');
+    tbody.innerHTML = !alerts.length
+      ? '<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--accent)">✅ No alerts</td></tr>'
+      : alerts.slice(0,6).map(a=>{
+          const d=a.days_left;
+          const b=d<0?'<span class="badge badge-red">Expired</span>':d<=7?'<span class="badge badge-warn">'+d+'d left</span>':'<span class="badge" style="background:rgba(0,136,255,.1);color:var(--accent2)">'+d+'d</span>';
+          return `<tr><td><strong>${a.name}</strong></td><td class="mono">${a.quantity}</td><td>${b}</td></tr>`;
+        }).join('');
+  } catch(e){}
+  try {
+    const r = await fetch('/api/bills'); const bills = await r.json();
+    const tbody = document.getElementById('recent-bills');
+    tbody.innerHTML = !bills.length
+      ? '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">No bills yet — <a href="billing.html" style="color:var(--accent2)">create the first</a></td></tr>'
+      : bills.slice(0,6).map(b=>`<tr>
+          <td class="mono" style="color:var(--muted)">#${b.id}</td>
+          <td>${b.customer_name}</td>
+          <td class="mono">${fmt(b.total_amount)}</td>
+          <td class="mono" style="color:var(--accent)">${fmt(b.profit)}</td>
+          <td style="color:var(--muted);font-size:11px">${new Date(b.created_at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</td>
+        </tr>`).join('');
+  } catch(e){}
+}
+loadDashboard();
+</script>
+</body>
+</html>

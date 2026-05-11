@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Inventory — Stock Sense</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080b10;--surface:#0e1219;--card:#141820;--border:#1f2630;--accent:#00ff88;--accent2:#0088ff;--text:#e2e8f0;--muted:#4a5568;--danger:#ff4466;--warn:#ffaa00;}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;display:flex}
+
+/* ── SIDEBAR ── */
+.sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;flex-shrink:0}
+.sidebar-logo{padding:28px 24px 24px;border-bottom:1px solid var(--border)}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.06em;background:linear-gradient(135deg,#fff,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-sub{font-size:11px;color:var(--muted);margin-top:2px;font-family:'JetBrains Mono',monospace}
+nav{padding:16px 12px;flex:1}
+.nav-section{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding:12px 12px 6px;font-family:'JetBrains Mono',monospace}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted);transition:.15s;margin-bottom:2px;text-decoration:none}
+.nav-item:hover{color:var(--text);background:var(--card)}
+.nav-item.active{color:var(--accent);background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.1)}
+.sidebar-bottom{padding:16px 12px;border-top:1px solid var(--border)}
+.user-badge{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border-radius:10px;border:1px solid var(--border)}
+.user-avatar{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#000;flex-shrink:0}
+.user-name{font-size:13px;font-weight:600}
+.user-role{font-size:11px;color:var(--muted)}
+
+/* ── MAIN ── */
+.main{flex:1;padding:32px;overflow-y:auto}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+.page-title{font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:.04em}
+.page-sub{font-size:13px;color:var(--muted)}
+
+/* ── STATS ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.scard{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px}
+.scard-val{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.02em}
+.scard.g .scard-val{color:var(--accent)}
+.scard.b .scard-val{color:var(--accent2)}
+.scard.y .scard-val{color:var(--warn)}
+.scard.r .scard-val{color:var(--danger)}
+.scard-lbl{font-size:12px;color:var(--muted);margin-top:4px}
+
+/* ── ADD FORM ── */
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px}
+.card-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.04em;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.form-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;align-items:end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:11px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase}
+input,select{padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:14px;font-family:'Outfit',sans-serif;outline:none;transition:.2s;width:100%}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,255,136,.08)}
+input::placeholder{color:var(--muted)}
+select option{background:var(--surface)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 20px;border-radius:9px;border:none;cursor:pointer;font-size:14px;font-weight:600;font-family:'Outfit',sans-serif;transition:.2s;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{background:#00ffaa;transform:translateY(-1px)}
+.btn-secondary{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--accent2);color:var(--accent2)}
+.btn-danger{background:rgba(255,68,102,.1);color:var(--danger);border:1px solid rgba(255,68,102,.2)}
+.btn-danger:hover{background:rgba(255,68,102,.2)}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:7px}
+.btn-warn{background:rgba(255,170,0,.1);color:var(--warn);border:1px solid rgba(255,170,0,.2)}
+.btn-warn:hover{background:rgba(255,170,0,.2)}
+
+/* ── TABLE ── */
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px}
+.table-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px}
+.search-filter{display:flex;gap:10px;align-items:center}
+.search-input{padding:9px 14px;background:var(--surface);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:13px;font-family:'Outfit',sans-serif;outline:none;width:220px;transition:.2s}
+.search-input:focus{border-color:var(--accent)}
+.filter-select{padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:13px;font-family:'Outfit',sans-serif;outline:none}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:9px 12px;text-align:left;font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap}
+th:hover{color:var(--text)}
+th .sort-arrow{opacity:.4;margin-left:4px}
+th.sorted .sort-arrow{opacity:1;color:var(--accent)}
+td{padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.03);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.mono{font-family:'JetBrains Mono',monospace;font-size:12px}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:rgba(0,255,136,.1);color:var(--accent)}
+.badge-blue{background:rgba(0,136,255,.1);color:var(--accent2)}
+.badge-red{background:rgba(255,68,102,.1);color:var(--danger)}
+.badge-warn{background:rgba(255,170,0,.1);color:var(--warn)}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.margin-pill{display:inline-block;padding:2px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600}
+.action-group{display:flex;gap:6px}
+
+/* ── EDIT MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px)}
+.overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:32px;width:90%;max-width:560px;animation:mIn .3s ease}
+@keyframes mIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.04em;margin-bottom:20px}
+.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.edit-grid .full{grid-column:1/-1}
+.modal-btns{display:flex;gap:10px;justify-content:flex-end}
+
+/* ── LOW STOCK / EXPIRY INLINE BADGES ── */
+.row-warn td{background:rgba(255,170,0,.03)}
+.row-danger td{background:rgba(255,68,102,.03)}
+
+.toast{position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 20px;font-size:14px;font-weight:500;z-index:200;transform:translateY(80px);opacity:0;transition:.3s;max-width:320px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-left:3px solid var(--accent)}
+.toast.err{border-left:3px solid var(--danger)}
+
+.empty-state{text-align:center;padding:60px;color:var(--muted)}
+.empty-icon{font-size:48px;margin-bottom:12px;opacity:.4}
+
+/* ── BARCODE SCANNER ── */
+.scan-strip{display:flex;align-items:center;gap:12px;background:rgba(0,136,255,.05);border:1px solid rgba(0,136,255,.15);border-radius:12px;padding:12px 16px;margin-bottom:20px;}
+.scan-strip-left{flex:1}
+.scan-lbl{font-size:11px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px}
+.scan-row{display:flex;gap:8px;align-items:center}
+#inv-barcode-input{flex:1;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:'JetBrains Mono',monospace;outline:none;transition:.2s;letter-spacing:.05em;}
+#inv-barcode-input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(0,136,255,.1)}
+#inv-barcode-input::placeholder{font-family:'Outfit',sans-serif;letter-spacing:normal;color:var(--muted)}
+.btn-inv-cam{display:flex;align-items:center;gap:6px;padding:9px 14px;background:rgba(0,136,255,.1);border:1px solid rgba(0,136,255,.25);border-radius:8px;color:var(--accent2);cursor:pointer;font-size:13px;font-weight:600;font-family:'Outfit',sans-serif;transition:.15s;white-space:nowrap;}
+.btn-inv-cam:hover{background:rgba(0,136,255,.2)}
+.btn-inv-cam.active{background:rgba(255,68,102,.1);border-color:rgba(255,68,102,.3);color:var(--danger)}
+.scan-status-inv{font-size:12px;margin-top:5px;display:flex;align-items:center;gap:6px;color:var(--muted)}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--accent2);flex-shrink:0}
+.sdot.cam{background:var(--accent);animation:blink2 1s infinite}
+.sdot.found{background:var(--accent)}.sdot.error{background:var(--danger)}
+@keyframes blink2{0%,100%{opacity:1}50%{opacity:.3}}
+.cam-overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;z-index:200;flex-direction:column;gap:16px}
+.cam-overlay.open{display:flex}
+.cam-box{position:relative;border-radius:16px;overflow:hidden;border:2px solid var(--accent2);max-width:360px;width:90%}
+#inv-cam-video{width:100%;display:block;border-radius:14px}
+.cam-aim{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center}
+.cam-aim-inner{width:200px;height:100px;border:2px solid var(--accent2);border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.4)}
+.cam-flash-inv{position:absolute;inset:0;background:rgba(0,136,255,.3);border-radius:14px;opacity:0;transition:.3s;pointer-events:none}
+.cam-flash-inv.flash{opacity:1}
+.cam-hint{color:rgba(255,255,255,.7);font-size:13px;text-align:center;max-width:300px}
+.btn-cam-close{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:14px;font-family:'Outfit',sans-serif;font-weight:600}
+@keyframes rowPulse{0%{background:rgba(0,136,255,.15)}100%{background:transparent}}
+.row-highlight td{animation:rowPulse 1.8s ease forwards}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">Stock Sense</div>
+    <div class="logo-sub">Management OS</div>
+  </div>
+  <nav>
+    <div class="nav-section">Main</div>
+    <a href="home.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Dashboard
+    </a>
+    <div class="nav-section">Modules</div>
+    <a href="billing.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Billing
+    </a>
+    <a href="inventory.html" class="nav-item active">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+      Inventory
+    </a>
+    <a href="profit.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+      Profit
+    </a>
+    <a href="alerts.html" class="nav-item">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      Alerts <span id="alert-badge" style="display:none;background:var(--danger);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:auto"></span>
+    </a>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="user-badge">
+      <div class="user-avatar" id="avatar-char">O</div>
+      <div><div class="user-name" id="user-display">Owner</div><div class="user-role">Store Manager</div></div>
+    </div>
+    <a href="/logout" style="display:flex;align-items:center;gap:8px;padding:10px 12px;color:var(--muted);font-size:13px;text-decoration:none;margin-top:8px;border-radius:8px;transition:.15s" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--muted)'">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      Logout
+    </a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title">INVENTORY</div>
+      <div class="page-sub">Add, edit and manage all your products</div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="scard g"><div class="scard-val" id="st-total">—</div><div class="scard-lbl">Total Products</div></div>
+    <div class="scard b"><div class="scard-val" id="st-stock">—</div><div class="scard-lbl">Total Stock Units</div></div>
+    <div class="scard y"><div class="scard-val" id="st-low">—</div><div class="scard-lbl">Low Stock (≤5)</div></div>
+    <div class="scard r"><div class="scard-val" id="st-expiring">—</div><div class="scard-lbl">Expiring Soon</div></div>
+  </div>
+
+  <!-- Add product form -->
+  <div class="form-card">
+    <div class="card-title">➕ Add New Product</div>
+    <div class="form-grid">
+      <div class="field" style="grid-column:span 2">
+        <label>Product Name *</label>
+        <input id="f-name" placeholder="e.g. Amul Butter 500g"/>
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="f-cat">
+          <option value="">— Select —</option>
+          <option>Dairy</option><option>Beverages</option><option>Snacks</option>
+          <option>Grains</option><option>Personal Care</option><option>Vegetables</option>
+          <option>Bakery</option><option>Frozen</option><option>Groceries</option><option>Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Quantity *</label>
+        <input id="f-qty" type="number" min="0" placeholder="0"/>
+      </div>
+      <div class="field">
+        <label>Purchase Price ₹ *</label>
+        <input id="f-cost" type="number" step="0.01" min="0" placeholder="0.00"/>
+      </div>
+      <div class="field">
+        <label>Selling Price ₹ *</label>
+        <input id="f-price" type="number" step="0.01" min="0" placeholder="0.00"/>
+      </div>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr auto;margin-top:0">
+      <div class="field">
+        <label>Expiry Date</label>
+        <input id="f-expiry" type="date"/>
+      </div>
+      <div class="field">
+        <label>Barcode (optional)</label>
+        <input id="f-barcode" placeholder="e.g. 8901234567890" style="font-family:'JetBrains Mono',monospace"/>
+      </div>
+      <div></div><div></div>
+      <div class="field">
+        <label style="opacity:0">Add</label>
+        <button class="btn btn-primary" onclick="addProduct()">
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16m8-8H4"/></svg>
+          Add Product
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barcode Scanner Strip -->
+  <div class="scan-strip">
+    <div class="scan-strip-left">
+      <div class="scan-lbl">🔍 Barcode Lookup — scan to find & edit product</div>
+      <div class="scan-row">
+        <input id="inv-barcode-input" placeholder="Scan barcode or type to search…"
+          autocomplete="off" onkeydown="invBarcodeKey(event)" oninput="invBarcodeInput(this.value)"/>
+        <button class="btn-inv-cam" id="inv-cam-btn" onclick="toggleInvCamera()">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
+          Camera
+        </button>
+      </div>
+      <div class="scan-status-inv">
+        <div class="sdot" id="inv-sdot"></div>
+        <span id="inv-scan-txt">Ready — USB scanner or camera lookup</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product table -->
+  <div class="table-card">
+    <div class="table-head">
+      <div class="card-title" style="margin-bottom:0">📦 All Products</div>
+      <div class="search-filter">
+        <input class="search-input" placeholder="Search name or category…" oninput="filterProducts(this.value)"/>
+        <select class="filter-select" id="cat-filter" onchange="filterProducts(document.querySelector('.search-input').value)">
+          <option value="">All Categories</option>
+          <option>Dairy</option><option>Beverages</option><option>Snacks</option>
+          <option>Grains</option><option>Personal Care</option><option>Vegetables</option>
+          <option>Bakery</option><option>Frozen</option><option>Groceries</option><option>Other</option>
+        </select>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('name')">Name <span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('category')">Category <span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('quantity')">Stock <span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('purchase_price')">Cost <span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('selling_price')">Price <span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('margin')">Margin <span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('expiry_date')">Expiry <span class="sort-arrow">↕</span></th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="product-tbody">
+        <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">Loading…</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:12px;font-size:12px;color:var(--muted)" id="table-count"></div>
+  </div>
+</main>
+
+<!-- Edit Modal -->
+<div class="overlay" id="edit-overlay" onclick="closeIfBg(event)">
+  <div class="modal">
+    <div class="modal-title">✏️ Edit Product</div>
+    <input type="hidden" id="e-id"/>
+    <div class="edit-grid">
+      <div class="field full"><label>Product Name</label><input id="e-name"/></div>
+      <div class="field"><label>Category</label>
+        <select id="e-cat">
+          <option value="">— Select —</option>
+          <option>Dairy</option><option>Beverages</option><option>Snacks</option>
+          <option>Grains</option><option>Personal Care</option><option>Vegetables</option>
+          <option>Bakery</option><option>Frozen</option><option>Groceries</option><option>Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Quantity</label><input id="e-qty" type="number" min="0"/></div>
+      <div class="field"><label>Purchase Price ₹</label><input id="e-cost" type="number" step="0.01"/></div>
+      <div class="field"><label>Selling Price ₹</label><input id="e-price" type="number" step="0.01"/></div>
+      <div class="field full"><label>Expiry Date</label><input id="e-expiry" type="date"/></div>
+      <div class="field full"><label>Barcode (optional)</label><input id="e-barcode" placeholder="e.g. 8901234567890" style="font-family:'JetBrains Mono',monospace"/></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeEdit()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Inventory Camera Overlay -->
+<div class="cam-overlay" id="inv-cam-overlay">
+  <div class="cam-box">
+    <video id="inv-cam-video" playsinline autoplay muted></video>
+    <div class="cam-aim"><div class="cam-aim-inner"></div></div>
+    <div class="cam-flash-inv" id="inv-cam-flash"></div>
+  </div>
+  <div class="cam-hint">Point camera at the barcode to look up a product.</div>
+  <button class="btn-cam-close" onclick="stopInvCamera()">✕ Close Camera</button>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="shared.js"></script>
+<script>
+let allProducts = [];
+let sortCol = 'name', sortDir = 1;
+const fmt = n => '₹' + parseFloat(n||0).toFixed(2);
+
+function toast(msg, type='ok'){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+async function load(){
+  const r = await fetch('/api/products');
+  allProducts = await r.json();
+  // compute margin
+  allProducts.forEach(p => {
+    p.margin = p.purchase_price > 0
+      ? ((p.selling_price - p.purchase_price) / p.purchase_price * 100)
+      : 0;
+  });
+  updateStats();
+  renderTable(allProducts);
+  loadAlertBadge();
+}
+
+function updateStats(){
+  const total = allProducts.length;
+  const stock = allProducts.reduce((s,p) => s + p.quantity, 0);
+  const low   = allProducts.filter(p => p.quantity <= 5).length;
+  const soon  = allProducts.filter(p => {
+    if (!p.expiry_date) return false;
+    const d = Math.ceil((new Date(p.expiry_date) - new Date()) / 86400000);
+    return d <= 30;
+  }).length;
+  document.getElementById('st-total').textContent = total;
+  document.getElementById('st-stock').textContent = stock.toLocaleString('en-IN');
+  document.getElementById('st-low').textContent = low;
+  document.getElementById('st-expiring').textContent = soon;
+}
+
+async function loadAlertBadge(){
+  try {
+    const r = await fetch('/api/alerts');
+    const a = await r.json();
+    const badge = document.getElementById('alert-badge');
+    if (a.length) { badge.textContent = a.length; badge.style.display = 'inline'; }
+  } catch(e){}
+}
+
+function getDaysLeft(dateStr){
+  if (!dateStr) return null;
+  return Math.ceil((new Date(dateStr) - new Date()) / 86400000);
+}
+
+function renderTable(products){
+  const tbody = document.getElementById('product-tbody');
+  document.getElementById('table-count').textContent = `Showing ${products.length} of ${allProducts.length} products`;
+  if (!products.length){
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📦</div>No products found</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = products.map(p => {
+    const days = getDaysLeft(p.expiry_date);
+    const expBadge = !p.expiry_date ? '<span class="badge badge-gray">—</span>'
+      : days < 0  ? `<span class="badge badge-red">Expired</span>`
+      : days <= 7 ? `<span class="badge badge-warn">${days}d left</span>`
+      : days <= 30? `<span class="badge badge-blue">${days}d left</span>`
+      : `<span class="badge badge-green">${p.expiry_date}</span>`;
+    const stockBadge = p.quantity === 0 ? `<span class="badge badge-red">Out of Stock</span>`
+      : p.quantity <= 5 ? `<span class="badge badge-warn">${p.quantity}</span>`
+      : `<span style="font-family:'JetBrains Mono',monospace;font-size:13px">${p.quantity}</span>`;
+    const m = p.margin.toFixed(0);
+    const mc = p.margin >= 30 ? 'var(--accent)' : p.margin >= 10 ? 'var(--accent2)' : 'var(--danger)';
+    const rowCls = days !== null && days < 0 ? 'row-danger' : days !== null && days <= 7 ? 'row-warn' : '';
+    return `<tr class="${rowCls}">
+      <td><strong>${p.name}</strong></td>
+      <td>${p.category ? `<span class="badge badge-blue">${p.category}</span>` : '—'}</td>
+      <td>${stockBadge}</td>
+      <td class="mono">${fmt(p.purchase_price)}</td>
+      <td class="mono">${fmt(p.selling_price)}</td>
+      <td><span class="margin-pill" style="background:${mc}22;color:${mc}">${m}%</span></td>
+      <td>${expBadge}</td>
+      <td>
+        <div class="action-group">
+          <button class="btn btn-warn btn-sm" onclick="openEdit(${p.id})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id},'${p.name.replace(/'/g,"\\'")}')">Del</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterProducts(q){
+  const cat = document.getElementById('cat-filter').value;
+  const ql = q.toLowerCase();
+  let filtered = allProducts.filter(p =>
+    (p.name.toLowerCase().includes(ql) || (p.category||'').toLowerCase().includes(ql)) &&
+    (!cat || p.category === cat)
+  );
+  filtered = sortProducts(filtered);
+  renderTable(filtered);
+}
+
+function sortBy(col){
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = 1; }
+  document.querySelectorAll('th').forEach(t => t.classList.remove('sorted'));
+  filterProducts(document.querySelector('.search-input').value);
+}
+
+function sortProducts(arr){
+  return [...arr].sort((a,b) => {
+    let av = a[sortCol], bv = b[sortCol];
+    if (av === null || av === undefined) av = '';
+    if (bv === null || bv === undefined) bv = '';
+    return av < bv ? -sortDir : av > bv ? sortDir : 0;
+  });
+}
+
+async function addProduct(){
+  const name  = document.getElementById('f-name').value.trim();
+  const cat   = document.getElementById('f-cat').value;
+  const qty   = document.getElementById('f-qty').value;
+  const cost  = document.getElementById('f-cost').value;
+  const price = document.getElementById('f-price').value;
+  const exp   = document.getElementById('f-expiry').value;
+  if (!name || qty === '' || !cost || !price){ toast('Fill all required fields (*)', 'err'); return; }
+  if (parseFloat(price) < parseFloat(cost)){ toast('Selling price should be ≥ purchase price', 'err'); return; }
+  const barcode = document.getElementById('f-barcode').value.trim();
+  const r = await fetch('/api/products', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, category:cat, quantity:parseInt(qty),
+      purchase_price:parseFloat(cost), selling_price:parseFloat(price),
+      barcode:barcode||null, expiry_date:exp||null})
+  });
+  if (r.ok){
+    toast('Product added! ✅');
+    ['f-name','f-qty','f-cost','f-price','f-expiry','f-barcode'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('f-cat').value='';
+    load();
+  } else { toast('Error adding product','err'); }
+}
+
+function openEdit(id){
+  const p = allProducts.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('e-id').value    = p.id;
+  document.getElementById('e-name').value  = p.name;
+  document.getElementById('e-cat').value   = p.category || '';
+  document.getElementById('e-qty').value   = p.quantity;
+  document.getElementById('e-cost').value  = p.purchase_price;
+  document.getElementById('e-price').value = p.selling_price;
+  document.getElementById('e-expiry').value = p.expiry_date || '';
+  document.getElementById('e-barcode').value = p.barcode || '';
+  document.getElementById('edit-overlay').classList.add('open');
+}
+
+async function saveEdit(){
+  const id    = document.getElementById('e-id').value;
+  const name  = document.getElementById('e-name').value.trim();
+  const cat   = document.getElementById('e-cat').value;
+  const qty   = document.getElementById('e-qty').value;
+  const cost  = document.getElementById('e-cost').value;
+  const price = document.getElementById('e-price').value;
+  const exp   = document.getElementById('e-expiry').value;
+  const barc  = document.getElementById('e-barcode').value.trim();
+  if (!name){ toast('Name is required','err'); return; }
+  const r = await fetch(`/api/products/${id}`, {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name,category:cat,quantity:parseInt(qty),
+      purchase_price:parseFloat(cost),selling_price:parseFloat(price),
+      barcode:barc||null, expiry_date:exp||null})
+  });
+  if (r.ok){ toast('Product updated ✅'); closeEdit(); load(); }
+  else { toast('Update failed','err'); }
+}
+
+async function deleteProduct(id, name){
+  if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  const r = await fetch(`/api/products/${id}`, {method:'DELETE'});
+  if (r.ok){ toast('Product deleted'); load(); }
+  else { toast('Cannot delete (may be in a bill)','err'); }
+}
+
+function closeEdit(){ document.getElementById('edit-overlay').classList.remove('open'); }
+function closeIfBg(e){ if(e.target===document.getElementById('edit-overlay')) closeEdit(); }
+let invCodeReader = null;
+let invCameraActive = false;
+
+// START CAMERA
+async function startInvCamera(){
+  // 🛑 Prevent multiple starts
+  if (invCameraActive) {
+    console.log("Camera already running");
+    return;
+  }
+
+  try {
+    const ZXing = window.ZXing;
+    if(!ZXing){
+      toast('ZXing not loaded','err');
+      return;
+    }
+
+    invCameraActive = true;
+
+    // UI
+    document.getElementById('inv-cam-overlay').classList.add('open');
+    document.getElementById('inv-cam-btn').classList.add('active');
+    document.getElementById('inv-cam-btn').innerHTML = `Stop`;
+
+    setInvScanStatus('cam', 'Camera active — aim at barcode…');
+
+    // 🔥 Reset old reader if exists
+    if (invCodeReader) {
+      try { invCodeReader.reset(); } catch(e){}
+    }
+
+    const hints = new Map();
+hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+  ZXing.BarcodeFormat.CODE_128,
+  ZXing.BarcodeFormat.EAN_13,
+  ZXing.BarcodeFormat.EAN_8,
+  ZXing.BarcodeFormat.UPC_A
+]);
+
+invCodeReader = new ZXing.BrowserMultiFormatReader(hints);
+invCodeReader.timeBetweenScansMillis = 50;
+
+    const videoEl = document.getElementById('inv-cam-video');
+
+    await invCodeReader.decodeFromVideoDevice(
+  null, // 🔥 auto-select camera (VERY IMPORTANT)
+  videoEl,
+  (result, err) => {
+
+    if (result) {
+      const code = result.getText();
+      console.log("✅ Scanned:", code);
+
+      stopInvCamera();
+      invProcessBarcode(code);
+    }
+
+    if (err && !(err instanceof ZXing.NotFoundException)) {
+      console.error("Scan error:", err);
+    }
+  }
+);
+
+  } catch(err){
+    console.error("🚨 Camera error:", err);
+
+    setInvScanStatus('error', 'Camera error');
+    toast('Camera error', 'err');
+
+    stopInvCamera();
+  }
+}
+
+
+// STOP CAMERA
+function stopInvCamera(){
+  try {
+    if(invCodeReader){
+      invCodeReader.reset();
+    }
+  } catch(e){}
+
+  invCodeReader = null;
+  invCameraActive = false;
+
+  document.getElementById('inv-cam-overlay').classList.remove('open');
+  document.getElementById('inv-cam-btn').classList.remove('active');
+
+  document.getElementById('inv-cam-btn').innerHTML = `
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+    </svg> Camera`;
+
+  setInvScanStatus('ready','Ready — USB scanner or camera lookup');
+}
+
+
+// TOGGLE CAMERA
+function toggleInvCamera(){
+  if(invCameraActive) stopInvCamera();
+  else startInvCamera();
+}
+
+
+// 🔥 ADD THIS HERE ↓↓↓
+
+function setInvScanStatus(type, text){
+  const dot = document.getElementById('inv-sdot');
+  const txt = document.getElementById('inv-scan-txt');
+
+  dot.className = 'sdot ' + (type === 'cam' ? 'cam' :
+                            type === 'found' ? 'found' :
+                            type === 'error' ? 'error' : '');
+
+  txt.textContent = text;
+}
+
+function invProcessBarcode(code){
+  const cleanCode = String(code).trim();
+
+  console.log("🔍 SCANNED:", cleanCode);
+
+  const product = allProducts.find(p =>
+    String(p.barcode || '').trim() === cleanCode
+  );
+
+  if(product){
+    setInvScanStatus('found', `Found: ${product.name}`);
+
+    const flash = document.getElementById('inv-cam-flash');
+    if(flash){
+      flash.classList.add('flash');
+      setTimeout(()=>flash.classList.remove('flash'),300);
+    }
+
+    openEdit(product.id);
+    toast(`Found: ${product.name}`, 'ok');
+
+  } else {
+    setInvScanStatus('error', `Not found`);
+    toast(`Barcode not found — add product`, 'err');
+
+    document.getElementById('f-barcode').value = cleanCode;
+    document.getElementById('f-name').focus();
+  }
+}
+
+
+// 🔥 KEEP THIS LAST
+load();
+</script>
+</body>
+</html>
