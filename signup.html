@@ -158,6 +158,15 @@ input.invalid{border-color:var(--danger)}
         <input type="text" id="username" placeholder="Choose a username" oninput="validateUsername(this)"/>
       </div>
     </div>
+  <div class="field">
+    <label>Store Name</label>
+
+  <div class="input-wrap">
+    <input type="text"
+           id="storeName"
+           placeholder="Enter your store name"/>
+  </div>
+</div>
 
     <div class="field">
       <label>Password</label>
@@ -216,6 +225,7 @@ function checkMatch(){
 
 async function signup(){
   const username = document.getElementById('username').value.trim();
+  const storeName = document.getElementById('storeName').value.trim();
   const password = document.getElementById('password').value;
   const confirm = document.getElementById('confirmPassword').value;
   const role = document.getElementById('role').value;
@@ -227,7 +237,7 @@ async function signup(){
 
   errEl.classList.remove('show'); sucEl.classList.remove('show');
 
-  if (!username || !password || !confirm || !role) { 
+  if (!username || !storeName || !password || !confirm || !role) { 
     errEl.textContent='Fill in all fields.'; 
     errEl.classList.add('show'); 
     return; 
@@ -258,7 +268,7 @@ if (password.length < 6) {
     const res = await fetch('/signup', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({username, password, role})
+      body:JSON.stringify({username, storeName, password, role})
     });
     const data = await res.text();
 

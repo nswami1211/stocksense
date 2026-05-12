@@ -52,6 +52,7 @@ def init_db():
             username VARCHAR(50) UNIQUE NOT NULL,
             password VARCHAR(64) NOT NULL,
             role VARCHAR(20) DEFAULT 'cashier',
+            store_name VARCHAR(100),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -187,9 +188,10 @@ def signup():
     try:
         data = request.get_json()
         username = data.get('username')
+        store_name = data.get('store_name')
         password = data.get('password')
         role = data.get('role')
-        if not username or not password or not role:
+        if not username or not store_name or not password or not role:
             return "All fields are required", 400
         conn = get_db()
         if not conn:
@@ -204,12 +206,12 @@ def signup():
             return "Username already exists", 400
         hashed_password = hash_pw(password)
         query = """
-        INSERT INTO users (username, password, role)
-        VALUES (%s, %s, %s)
+        INSERT INTO users (username, password, role,store_name)
+        VALUES (%s, %s, %s, %s)
         """
         cursor.execute(
             query,
-            (username, hashed_password, role)
+            (username, hashed_password, role, store_name)
         )
         conn.commit()
         return "User registered successfully"
@@ -243,7 +245,7 @@ def login():
     cur = conn.cursor(dictionary=True)
     cur.execute(
         """
-        SELECT id, username, role
+        SELECT id, username, role, store_name
         FROM users
         WHERE username=%s AND password=%s
         """,
@@ -256,6 +258,7 @@ def login():
         session['user_id'] = user['id']
         session['username'] = user['username']
         session['role'] = user['role']
+        session['store_name'] = user['store_name']
         if user['role'] == 'owner':
             return jsonify({
                 'success': True,
@@ -288,6 +291,13 @@ def me():
     if 'user_id' in session:
         return jsonify({'logged_in': True, 'username': session.get('username', '')})
     return jsonify({'logged_in': False}), 401
+
+@app.route('/api/store')
+def get_store():
+
+    return jsonify({
+        'store_name': session.get('store_name', 'Stock Sense')
+    })
 
 # ─── PRODUCTS API ─────────────────────────────────────────────────────────────
 @app.route('/api/products', methods=['GET'])

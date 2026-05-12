@@ -406,6 +406,7 @@ select option{background:var(--surface)}
 <script src="shared.js"></script>
 <script>
 let cart = [], allProducts = [], lastData = null;
+let STORE_NAME = "Stock Sense";
 const fmt = n => '₹' + parseFloat(n||0).toFixed(2);
 
 function toast(msg, type='ok'){
@@ -555,6 +556,7 @@ async function generateBill(){
       lastData = {...data, cName, cPhone, cGst, cAddress, cPayment, discPct};
       buildReceipt(lastData);
       await fetchProducts();
+      await fetchStore();     
       cart = []; renderCart();
       toast('Invoice generated! 🎉');
     }
@@ -588,7 +590,7 @@ function buildReceipt(d){
     </div>`).join('');
 
   document.getElementById('receipt-content').innerHTML = `
-    <div class="r-brand">STOCK SENSE</div>
+    <div class="r-brand">${STORE_NAME.toUpperCase()}</div>
     <div class="r-sub">Supermarket Management System</div>
     <div class="r-sub">📍 Your Store Address · 📞 Your Store Phone</div>
     <div class="r-div thick"></div>
@@ -662,7 +664,7 @@ function buildPDFDoc(d){
 
   // Header
   bold(true); sz(16); clr(0,0,0);
-  txt('STOCK SENSE', W/2, y, {align:'center'}); y+=5;
+  txt(STORE_NAME.toUpperCase(), W/2, y, {align:'center'});
   bold(false); sz(7); clr(100,100,100);
   txt('Supermarket Management System', W/2, y, {align:'center'}); y+=4;
   txt('Your Store Address  |  Ph: Your Number', W/2, y, {align:'center'}); y+=5;
@@ -807,7 +809,7 @@ async function sendPDFWhatsApp(){
 function buildWAText(d){
   const subtotal = parseFloat(d.total_amount) / (1-(d.discPct||0)/100);
   return [
-    `🧾 *Invoice from Stock Sense*`,
+    `🧾 *Invoice from ${STORE_NAME}*`,
     `━━━━━━━━━━━━━━━━━`,
     `Invoice #: ${String(d.bill_id).padStart(5,'0')}`,
     `Customer: *${d.cName}*`,
@@ -933,9 +935,29 @@ function stopCamera(){
   setScanStatus('usb','Ready — USB or camera');
 }
 document.addEventListener('keydown', e => { if(e.key==='Escape' && cameraActive) stopCamera(); });
+async function fetchStore(){
 
-fetchProducts();
-updateSummary();
+  try{
+
+    const res = await fetch('/api/store');
+
+    const data = await res.json();
+
+    STORE_NAME = data.store_name || "Stock Sense";
+
+  }catch(e){
+
+    STORE_NAME = "Stock Sense";
+
+  }
+
+}
+async function init(){
+  await fetchStore();
+  await fetchProducts();
+  updateSummary();
+}
+init();
 </script>
 </body>
 </html>
