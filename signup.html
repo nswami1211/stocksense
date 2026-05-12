@@ -190,6 +190,7 @@ input.invalid{border-color:var(--danger)}
   <div class="input-wrap">
     <select id="role">
     <option value="">Choose Role</option>
+    <option value="admin">Admin</option>
     <option value="manager">Manager</option>
     <option value="cashier">Cashier</option>
 </select>
@@ -268,7 +269,8 @@ if (password.length < 6) {
     const res = await fetch('/signup', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({username, storeName, password, role})
+      body:JSON.stringify({username, 
+        store_name: storeName, password, role})
     });
     const data = await res.text();
 
