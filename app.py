@@ -95,6 +95,7 @@ def init_db():
     """)
     conn.commit(); cur.close(); conn.close()
     print("✅ stock_sense database ready.")
+init_db()
 
 # ─── SERVE HTML PAGES (with auth guard) ──────────────────────────────────────
 @app.route('/')
