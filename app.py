@@ -41,6 +41,7 @@ def init_db():
         host=DB_CONFIG['host'],
         user=DB_CONFIG['user'],
         password=DB_CONFIG['password']
+        port=DB_CONFIG['port']
     )
     cur = conn.cursor()
     cur.execute("CREATE DATABASE IF NOT EXISTS stock_sense")
