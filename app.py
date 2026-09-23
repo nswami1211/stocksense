@@ -12,11 +12,11 @@ CORS(app, supports_credentials=True)
 
 # ─── DATABASE CONFIG ──────────────────────────────────────────────────────────
 DB_CONFIG = {
-    'host': 'shortline.proxy.rlwy.net',
-    'user': 'root',
-    'password': 'aVuKLnRHybdBepNdzPgRjPPLGQSRrEFw',
-    'database': 'railway',
-    'port': 25610
+    'host': os.environ.get('MYSQL_HOST'),
+    'user': os.environ.get('MYSQL_USER'),
+    'password': os.environ.get('MYSQL_PASSWORD'),
+    'database': 'stock_sense',
+    'port': int(os.environ.get('MYSQL_PORT', 3306))
 }
 
 def get_db():
